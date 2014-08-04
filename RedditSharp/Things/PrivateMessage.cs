@@ -40,8 +40,7 @@ namespace RedditSharp.Things {
                 var firstMessage = listing.First();
                 if ( firstMessage.FullName == ParentID )
                     return listing.First();
-                else
-                    return firstMessage.Replies.First( x => x.FullName == ParentID );
+                return firstMessage.Replies.First( x => x.FullName == this.ParentID );
             }
         }
 

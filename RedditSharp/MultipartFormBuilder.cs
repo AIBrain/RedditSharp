@@ -59,7 +59,7 @@ namespace RedditSharp {
             stream.Close();
         }
 
-        private string CreateRandomBoundary() {
+        private static string CreateRandomBoundary() {
 
             // TODO: There's probably a better way to go about this
             const string characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

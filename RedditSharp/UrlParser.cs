@@ -23,8 +23,7 @@ namespace RedditSharp
                     return new Uri(token.Value<string>(), UriKind.Relative);
                 return new Uri(token.Value<string>(), UriKind.RelativeOrAbsolute);
             }
-            else
-                return token.Value<Uri>();
+            return token.Value<Uri>();
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
