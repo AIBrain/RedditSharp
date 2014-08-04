@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace RedditSharp.Things {
+
     public class Comment : VotableThing {
         private const string CommentUrl = "/api/comment";
         private const string DistinguishUrl = "/api/distinguish";

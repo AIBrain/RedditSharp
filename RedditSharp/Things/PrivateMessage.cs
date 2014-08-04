@@ -6,113 +6,131 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace RedditSharp.Things
-{
-    public class PrivateMessage : Thing
-    {
-        private const string SetAsReadUrl = "/api/read_message";
+namespace RedditSharp.Things {
+
+    public class PrivateMessage : Thing {
         private const string CommentUrl = "/api/comment";
+        private const string SetAsReadUrl = "/api/read_message";
 
-        private Reddit Reddit { get; set; }
-        private IWebAgent WebAgent { get; set; }
-
-        [JsonProperty("body")]
-        public string Body { get; set; }
-
-        [JsonProperty("body_html")]
-        public string BodyHtml { get; set; }
-
-        [JsonProperty("was_comment")]
-        public bool IsComment { get; set; }
-
-        [JsonProperty("created")]
-        [JsonConverter(typeof(UnixTimestampConverter))]
-        public DateTime Sent { get; set; }
-
-        [JsonProperty("created_utc")]
-        [JsonConverter(typeof(UnixTimestampConverter))]
-        public DateTime SentUTC { get; set; }
-
-        [JsonProperty("dest")]
-        public string Destination { get; set; }
-
-        [JsonProperty("author")]
+        [JsonProperty( "author" )]
         public string Author { get; set; }
 
-        [JsonProperty("subreddit")]
-        public string Subreddit { get; set; }
+        [JsonProperty( "body" )]
+        public string Body { get; set; }
 
-        [JsonProperty("new")]
-        public bool Unread { get; set; }
+        [JsonProperty( "body_html" )]
+        public string BodyHtml { get; set; }
 
-        [JsonProperty("subject")]
-        public string Subject { get; set; }
+        [JsonProperty( "dest" )]
+        public string Destination { get; set; }
 
-        [JsonProperty("parent_id")]
-        public string ParentID { get; set; }
-
-        [JsonProperty("first_message_name")]
+        [JsonProperty( "first_message_name" )]
         public string FirstMessageName { get; set; }
+
+        [JsonProperty( "was_comment" )]
+        public bool IsComment { get; set; }
+
+        [JsonIgnore]
+        public PrivateMessage Parent {
+            get {
+                if ( string.IsNullOrEmpty( ParentID ) )
+                    return null;
+                var id = ParentID.Remove( 0, 3 );
+                var listing = new Listing<PrivateMessage>( Reddit, "/message/messages/" + id + ".json", WebAgent );
+                var firstMessage = listing.First();
+                if ( firstMessage.FullName == ParentID )
+                    return listing.First();
+                else
+                    return firstMessage.Replies.First( x => x.FullName == ParentID );
+            }
+        }
+
+        [JsonProperty( "parent_id" )]
+        public string ParentID { get; set; }
 
         [JsonIgnore]
         public PrivateMessage[] Replies { get; set; }
 
-        [JsonIgnore]
-        public PrivateMessage Parent
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(ParentID))
+        [JsonProperty( "created" )]
+        [JsonConverter( typeof( UnixTimestampConverter ) )]
+        public DateTime Sent { get; set; }
+
+        [JsonProperty( "created_utc" )]
+        [JsonConverter( typeof( UnixTimestampConverter ) )]
+        public DateTime SentUTC { get; set; }
+
+        [JsonProperty( "subject" )]
+        public string Subject { get; set; }
+
+        [JsonProperty( "subreddit" )]
+        public string Subreddit { get; set; }
+
+        public Listing<PrivateMessage> Thread {
+            get {
+                if ( string.IsNullOrEmpty( ParentID ) )
                     return null;
-                var id = ParentID.Remove(0, 3);
-                var listing = new Listing<PrivateMessage>(Reddit, "/message/messages/" + id + ".json", WebAgent);
-                var firstMessage = listing.First();
-                if (firstMessage.FullName == ParentID)
-                    return listing.First();
-                else
-                    return firstMessage.Replies.First(x => x.FullName == ParentID);
+                var id = ParentID.Remove( 0, 3 );
+                return new Listing<PrivateMessage>( Reddit, "/message/messages/" + id + ".json", WebAgent );
             }
         }
 
-        public Listing<PrivateMessage> Thread
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(ParentID))
-                    return null;
-                var id = ParentID.Remove(0, 3);
-                return new Listing<PrivateMessage>(Reddit, "/message/messages/" + id + ".json", WebAgent);
-            }
-        }
+        [JsonProperty( "new" )]
+        public bool Unread { get; set; }
 
-        public PrivateMessage Init(Reddit reddit, JToken json, IWebAgent webAgent)
-        {
-            CommonInit(reddit, json, webAgent);
-            JsonConvert.PopulateObject(json["data"].ToString(), this, reddit.JsonSerializerSettings);
-            return this;
-        }
-        public async Task<PrivateMessage> InitAsync(Reddit reddit, JToken json, IWebAgent webAgent)
-        {
-            CommonInit(reddit, json, webAgent);
-            await JsonConvert.PopulateObjectAsync(json["data"].ToString(), this, reddit.JsonSerializerSettings);
+        private Reddit Reddit { get; set; }
+
+        private IWebAgent WebAgent { get; set; }
+
+        public PrivateMessage Init( Reddit reddit, JToken json, IWebAgent webAgent ) {
+            CommonInit( reddit, json, webAgent );
+            JsonConvert.PopulateObject( json[ "data" ].ToString(), this, reddit.JsonSerializerSettings );
             return this;
         }
 
-        private void CommonInit(Reddit reddit, JToken json, IWebAgent webAgent)
-        {
-            base.Init(json);
+        public async Task<PrivateMessage> InitAsync( Reddit reddit, JToken json, IWebAgent webAgent ) {
+            CommonInit( reddit, json, webAgent );
+            await JsonConvert.PopulateObjectAsync( json[ "data" ].ToString(), this, reddit.JsonSerializerSettings );
+            return this;
+        }
+
+        public void Reply( string message ) {
+            if ( Reddit.User == null )
+                throw new AuthenticationException( "No user logged in." );
+            var request = WebAgent.CreatePost( CommentUrl );
+            var stream = request.GetRequestStream();
+            WebAgent.WritePostBody( stream, new {
+                text = message,
+                thing_id = FullName,
+                uh = Reddit.User.Modhash
+            } );
+            stream.Close();
+            var response = request.GetResponse();
+            var data = WebAgent.GetResponseString( response.GetResponseStream() );
+            var json = JObject.Parse( data );
+        }
+
+        public void SetAsRead() {
+            var request = WebAgent.CreatePost( SetAsReadUrl );
+            WebAgent.WritePostBody( request.GetRequestStream(), new {
+                id = FullName,
+                uh = Reddit.User.Modhash,
+                api_type = "json"
+            } );
+            var response = request.GetResponse();
+            var data = WebAgent.GetResponseString( response.GetResponseStream() );
+        }
+
+        private void CommonInit( Reddit reddit, JToken json, IWebAgent webAgent ) {
+            base.Init( json );
             Reddit = reddit;
             WebAgent = webAgent;
-            var data = json["data"];
-            if (data["replies"] != null && data["replies"].Any())
-            {
-                if (data["replies"]["data"] != null)
-                {
-                    if (data["replies"]["data"]["children"] != null)
-                    {
+            var data = json[ "data" ];
+            if ( data[ "replies" ] != null && data[ "replies" ].Any() ) {
+                if ( data[ "replies" ][ "data" ] != null ) {
+                    if ( data[ "replies" ][ "data" ][ "children" ] != null ) {
                         var replies = new List<PrivateMessage>();
-                        foreach (var reply in data["replies"]["data"]["children"])
-                            replies.Add(new PrivateMessage().Init(reddit, reply, webAgent));
+                        foreach ( var reply in data[ "replies" ][ "data" ][ "children" ] )
+                            replies.Add( new PrivateMessage().Init( reddit, reply, webAgent ) );
                         Replies = replies.ToArray();
                     }
                 }
@@ -121,43 +139,11 @@ namespace RedditSharp.Things
 
         #region Obsolete Getter Methods
 
-        [Obsolete("Use Thread property instead")]
-        public Listing<PrivateMessage> GetThread()
-        {
+        [Obsolete( "Use Thread property instead" )]
+        public Listing<PrivateMessage> GetThread() {
             return Thread;
         }
 
-        #endregion Obsolete Gettter Methods
-
-        public void SetAsRead()
-        {
-            var request = WebAgent.CreatePost(SetAsReadUrl);
-            WebAgent.WritePostBody(request.GetRequestStream(), new
-            {
-                id = FullName,
-                uh = Reddit.User.Modhash,
-                api_type = "json"
-            });
-            var response = request.GetResponse();
-            var data = WebAgent.GetResponseString(response.GetResponseStream());
-        }
-
-        public void Reply(string message)
-        {
-            if (Reddit.User == null)
-                throw new AuthenticationException("No user logged in.");
-            var request = WebAgent.CreatePost(CommentUrl);
-            var stream = request.GetRequestStream();
-            WebAgent.WritePostBody(stream, new
-            {
-                text = message,
-                thing_id = FullName,
-                uh = Reddit.User.Modhash
-            });
-            stream.Close();
-            var response = request.GetResponse();
-            var data = WebAgent.GetResponseString(response.GetResponseStream());
-            var json = JObject.Parse(data);
-        }
+        #endregion Obsolete Getter Methods
     }
 }
