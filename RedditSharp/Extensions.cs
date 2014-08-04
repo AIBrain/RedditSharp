@@ -1,14 +1,13 @@
-﻿using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
-namespace RedditSharp
-{
-    public static class Extensions
-    {
-        public static T ValueOrDefault<T>(this IEnumerable<JToken> enumerable)
-        {
-            if (enumerable == null)
-                return default(T);
+namespace RedditSharp {
+
+    public static class Extensions {
+
+        public static T ValueOrDefault<T>( this IEnumerable<JToken> enumerable ) {
+            if ( enumerable == null )
+                return default( T );
             return enumerable.Value<T>();
         }
     }

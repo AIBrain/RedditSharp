@@ -1,15 +1,13 @@
 using System;
 
-namespace RedditSharp
-{
-    public class RateLimitException : Exception
-    {
-        public TimeSpan TimeToReset { get; set; }
+namespace RedditSharp {
 
-        public RateLimitException(TimeSpan timeToReset)
-        {
+    public class RateLimitException : Exception {
+
+        public RateLimitException( TimeSpan timeToReset ) {
             TimeToReset = timeToReset;
         }
+
+        public TimeSpan TimeToReset { get; set; }
     }
 }
-

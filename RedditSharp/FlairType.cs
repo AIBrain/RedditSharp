@@ -1,7 +1,6 @@
-﻿namespace RedditSharp
-{
-    public enum FlairType
-    {
+﻿namespace RedditSharp {
+
+    public enum FlairType {
         Link,
         User
     }
