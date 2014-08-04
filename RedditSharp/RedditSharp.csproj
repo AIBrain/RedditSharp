@@ -70,6 +70,7 @@
     <Compile Include="ModeratorUser.cs" />
     <Compile Include="MultipartFormBuilder.cs" />
     <Compile Include="FlairType.cs" />
+    <Compile Include="Things\DistinguishType.cs" />
     <Compile Include="Things\Post.cs" />
     <Compile Include="Things\PrivateMessage.cs" />
     <Compile Include="Reddit.cs" />
